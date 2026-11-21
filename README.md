@@ -7,4 +7,4 @@ Single-file tool (React, Tailwind, Recharts via CDN) that compares a baby's weig
 
 Saved entries live in the browser's localStorage under `bpc-v1`.
 
-Live: https://nprail.github.io/baby-percentile/
+Live: https://www.noahprail.com/baby-percentile/
