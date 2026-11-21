@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baby Weight Percentile Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { fontFamily: { display: ['Fraunces', 'Georgia', 'serif'], sans: ['Inter', 'system-ui', 'sans-serif'] } } }
+  };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<style>
+  body { font-family: Inter, system-ui, sans-serif; }
+  .recharts-surface { overflow: visible; }
+  input[type=number]::-webkit-inner-spin-button { opacity: .4; }
+  html { -webkit-text-size-adjust: 100%; }
+  button, input, select, textarea, label, summary { touch-action: manipulation; }
+  /* iOS Safari zooms the page when a focused field's font is under 16px */
+  @media (max-width: 767px) { input, select, textarea { font-size: 16px !important; } }
+  input[type=date] { min-width: 0; -webkit-appearance: none; appearance: none; text-align: left; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+/* CDC weight-for-age, birth to 36 months. Rows: [agemos, L, M, S, P3, P5, P10, P25, P50, P75, P90, P95, P97], weights in kg. */
+window.GROWTH_DATA = {"boy":[[0.0,1.815151,3.530203,0.152385,2.355451,2.526904,2.773802,3.150611,3.530203,3.879077,4.172493,4.340293,4.446488],[0.5,1.547523,4.003106,0.146025,2.799549,2.964656,3.20951,3.597396,4.003106,4.387423,4.718161,4.91013,5.032625],[1.5,1.068796,4.879525,0.136479,3.614688,3.774849,4.020561,4.428873,4.879525,5.327328,5.728153,5.967102,6.121929],[2.5,0.695974,5.672889,0.129678,4.342341,4.503255,4.754479,5.183378,5.672889,6.175598,6.638979,6.921119,7.10625],[3.5,0.419815,6.391392,0.124717,4.992898,5.157412,5.416803,5.866806,6.391392,6.942217,7.460702,7.781401,7.993878],[4.5,0.219867,7.041836,0.12104,5.575169,5.744752,6.013716,6.484969,7.041836,7.635323,8.202193,8.556813,8.793444],[5.5,0.077506,7.630425,0.118271,6.096775,6.272175,6.551379,7.043627,7.630425,8.262033,8.871384,9.255615,9.513307],[6.5,-0.021908,8.162951,0.116154,6.56443,6.745993,7.035656,7.548346,8.162951,8.828786,9.475466,9.885436,10.16135],[7.5,-0.089441,8.644832,0.11451,6.984123,7.171952,7.472021,8.004399,8.644832,9.34149,10.021014,10.453314,10.744924],[8.5,-0.133409,9.08112,0.113217,7.361236,7.555287,7.865533,8.416719,9.08112,9.805593,10.514064,10.965736,11.270838],[9.5,-0.160095,9.4765,0.112186,7.700624,7.900755,8.220839,8.789882,9.4765,10.226124,10.960172,11.428676,11.745385],[10.5,-0.174297,9.835308,0.111355,8.006677,8.212684,8.542195,9.12811,9.835308,10.607722,11.36445,11.847633,12.174357],[11.5,-0.179719,10.161536,0.110676,8.283365,8.495,8.833486,9.435279,10.161536,10.95466,11.731602,12.227661,12.563083],[12.5,-0.179254,10.458854,0.110119,8.534275,8.751264,9.098246,9.714942,10.458854,11.270871,12.065948,12.573402,12.91645],[13.5,-0.175184,10.730626,0.109657,8.762649,8.984701,9.339688,9.970338,10.730626,11.559963,12.371453,12.889108,13.238933],[14.5,-0.169323,10.979925,0.109274,8.971407,9.198222,9.560722,10.204418,10.979925,11.825241,12.651749,13.17867,13.534622],[15.5,-0.163114,11.209555,0.108956,9.16318,9.394454,9.763982,10.419863,11.209555,12.069725,12.910152,13.44564,13.807244],[16.5,-0.15771,11.422068,0.108695,9.340328,9.575757,9.95184,10.619101,11.422068,12.29617,13.149687,13.693251,14.060194],[17.5,-0.154023,11.619777,0.108483,9.504964,9.744251,10.126434,10.804329,11.619777,12.50708,13.373106,13.924442,14.296548],[18.5,-0.152762,11.804779,0.108317,9.658975,9.90183,10.28968,10.977527,11.804779,12.704728,13.582902,14.141875,14.519093],[19.5,-0.154467,11.978966,0.108194,9.804039,10.050187,10.443295,11.140475,11.978966,12.891168,13.781331,14.347954,14.730343],[20.5,-0.159522,12.144043,0.108111,9.941645,10.190823,10.588812,11.294771,12.144043,13.068254,13.970425,14.544842,14.932559],[21.5,-0.168179,12.301541,0.108067,10.073105,10.32507,10.727592,11.441847,12.301541,13.237653,14.15201,14.734482,15.127765],[22.5,-0.180567,12.45283,0.108062,10.199575,10.454102,10.860844,11.582978,12.45283,13.400856,14.327718,14.918606,15.31777],[23.5,-0.196702,12.599135,0.108095,10.322062,10.578949,10.989635,11.719299,12.599135,13.559197,14.499004,15.098756,15.504178],[24.5,-0.216501,12.741544,0.108166,10.441442,10.700513,11.114904,11.851817,12.741544,13.71386,14.667158,15.276296,15.688406],[25.5,-0.23979,12.881023,0.108275,10.558473,10.819575,11.237473,11.981419,12.881023,13.865896,14.833316,15.452424,15.871699],[26.5,-0.266316,13.018424,0.108421,10.673803,10.936812,11.358059,12.108888,13.018424,14.01623,14.998478,15.628189,16.055142],[27.5,-0.295755,13.154497,0.108605,10.787982,11.052801,11.47728,12.234907,13.154497,14.165672,15.163512,15.8045,16.239671],[28.5,-0.327729,13.289897,0.108826,10.901473,11.168034,11.59567,12.360072,13.289897,14.314932,15.329172,15.982139,16.42609],[29.5,-0.361817,13.425194,0.109083,11.014664,11.282926,11.713683,12.484898,13.425194,14.464622,15.496103,16.161769,16.615076],[30.5,-0.397568,13.560881,0.109378,11.12787,11.39782,11.831705,12.609827,13.560881,14.61527,15.664853,16.34395,16.807196],[31.5,-0.43452,13.697379,0.109708,11.241348,11.513,11.950054,12.735234,13.697379,14.767324,15.835883,16.529146,17.002914],[32.5,-0.472189,13.835046,0.110073,11.355298,11.628692,12.068997,12.861438,13.835046,14.921166,16.009575,16.71773,17.202598],[33.5,-0.510123,13.974182,0.110473,11.46988,11.745079,12.188748,12.988699,13.974182,15.077109,16.186239,16.910002,17.406538],[34.5,-0.547886,14.115032,0.110907,11.58521,11.8623,12.309477,13.117232,14.115032,15.235412,16.366119,17.106191,17.614947],[35.5,-0.58507,14.257796,0.111375,11.701371,11.980456,12.431315,13.247207,14.257796,15.396279,16.549405,17.306461,17.827972],[36.0,-0.603338,14.329944,0.111621,11.759784,12.03991,12.492682,13.312776,14.329944,15.477724,16.642369,17.408165,17.936247]],"girl":[[0.0,1.509188,3.399186,0.142107,2.414112,2.547905,2.747222,3.064865,3.399186,3.717519,3.992572,4.152637,4.254922],[0.5,1.357944,3.797528,0.138076,2.756917,2.894442,3.101767,3.437628,3.797528,4.145594,4.450126,4.628836,4.743582],[1.5,1.105538,4.544777,0.131734,3.402293,3.54761,3.770157,4.138994,4.544777,4.946766,5.305632,5.519169,5.657379],[2.5,0.902597,5.230584,0.126893,3.997806,4.150639,4.387042,4.78482,5.230584,5.680083,6.087641,6.332837,6.492574],[3.5,0.734121,5.859961,0.123025,4.547383,4.707123,4.955926,5.379141,5.859961,6.351512,6.80277,7.076723,7.256166],[4.5,0.590235,6.437588,0.119841,5.054539,5.220488,5.480295,5.925888,6.437588,6.966524,7.457119,7.757234,7.95473],[5.5,0.464392,6.96785,0.117167,5.5225,5.693974,5.96351,6.428828,6.96785,7.53018,8.056331,8.38033,8.594413],[6.5,0.352164,7.454854,0.114894,5.954272,6.130641,6.408775,6.891533,7.454854,8.047178,8.605636,8.951544,9.180938],[7.5,0.250498,7.902436,0.11295,6.352668,6.533373,6.819122,7.317373,7.902436,8.521877,9.109878,9.476009,9.719621],[8.5,0.157248,8.314178,0.111285,6.720328,6.904886,7.197414,7.709516,8.314178,8.958324,9.573546,9.95848,10.215388],[9.5,0.070886,8.693418,0.109864,7.059732,7.247736,7.546342,8.070932,8.693418,9.360271,10.000792,10.403355,10.672801],[10.5,-0.009685,9.043262,0.108661,7.373212,7.564327,7.868436,8.4044,9.043262,9.731193,10.395451,10.814695,11.09607],[11.5,-0.085258,9.366594,0.107656,7.662959,7.856916,8.166069,8.712513,9.366594,10.074306,10.761063,11.196246,11.489076],[12.5,-0.156409,9.666089,0.106835,7.93103,8.127621,8.44146,8.997692,9.666089,10.392576,11.100887,11.551451,11.855391],[13.5,-0.223559,9.944226,0.106183,8.179356,8.378425,8.696684,9.262185,9.944226,10.688742,11.41792,11.883477,12.198293],[14.5,-0.287013,10.203294,0.105691,8.409744,8.611186,8.93368,9.508085,10.203294,10.965321,11.714911,12.195223,12.520785],[15.5,-0.346999,10.445406,0.10535,8.623887,8.827638,9.154251,9.737329,10.445406,11.224627,11.994379,12.48934,12.82561],[16.5,-0.403689,10.672507,0.10515,8.82337,9.029399,9.360079,9.951715,10.672507,11.468779,12.258624,12.768249,13.115272],[17.5,-0.457219,10.886386,0.105084,9.009668,9.21798,9.552723,10.1529,10.886386,11.699718,12.509741,13.03415,13.392045],[18.5,-0.507701,11.088682,0.105144,9.18416,9.394782,9.73363,10.342415,11.088682,11.919211,12.749637,13.289041,13.65799],[19.5,-0.555236,11.280895,0.105323,9.348127,9.56111,9.90414,10.521669,11.280895,12.12887,12.980037,13.534728,13.914971],[20.5,-0.599921,11.464397,0.105613,9.50276,9.71817,10.065489,10.691956,11.464397,12.330156,13.202503,13.772841,14.164667],[21.5,-0.641854,11.640434,0.106007,9.649162,9.867081,10.21882,10.854462,11.640434,12.524391,13.418439,14.004844,14.408584],[22.5,-0.681138,11.810139,0.106498,9.788355,10.008874,10.36518,11.010271,11.810139,12.712769,13.629108,14.232045,14.648068],[23.5,-0.717883,11.974537,0.107078,9.921281,10.144499,10.505533,11.160373,11.974537,12.896363,13.835635,14.455614,14.884316],[24.5,-0.752206,12.134555,0.10774,10.048808,10.274829,10.64076,11.305666,12.134555,13.076132,14.039025,14.676585,15.118389],[25.5,-0.784234,12.291025,0.108477,10.171734,10.400664,10.771667,11.446967,12.291025,13.252935,14.240165,14.895872,15.351221],[26.5,-0.814097,12.444692,0.109281,10.290791,10.522736,10.898985,11.585013,12.444692,13.427531,14.439838,15.114276,15.583627],[27.5,-0.841935,12.596223,0.110144,10.406644,10.64171,11.02338,11.720466,12.596223,13.600594,14.638729,15.332495,15.816318],[28.5,-0.867889,12.746209,0.111061,10.519902,10.758192,11.145454,11.853924,12.746209,13.772713,14.837433,15.551131,16.049903],[29.5,-0.892103,12.895172,0.112023,10.631115,10.872728,11.265746,11.985917,12.895172,13.944404,15.036464,15.770701,16.284906],[30.5,-0.914719,13.043572,0.113023,10.740782,10.985812,11.384743,12.116919,13.043572,14.116113,15.23626,15.991643,16.521765],[31.5,-0.93588,13.191808,0.114056,10.84935,11.097886,11.502878,12.247348,13.191808,14.288225,15.437192,16.214324,16.760846],[32.5,-0.955723,13.340229,0.115115,10.957219,11.209345,11.620537,12.377573,13.340229,14.461065,15.63957,16.439044,17.002447],[33.5,-0.974381,13.489134,0.116193,11.064747,11.320538,11.738058,12.507913,13.489134,14.634908,15.843647,16.666048,17.246809],[34.5,-0.991981,13.638774,0.117286,11.172248,11.431774,11.85574,12.638647,13.638774,14.809981,16.049626,16.895526,17.494115],[35.5,-1.008641,13.789365,0.118387,11.279999,11.543323,11.973842,12.770013,13.789365,14.98647,16.257667,17.127623,17.744504],[36.0,-1.016653,13.865074,0.118939,11.334045,11.599289,12.033121,12.835999,13.865074,15.075293,16.3625,17.244688,17.870885]]};
+</script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useEffect, useRef } = React;
+const { ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
+const DATA = window.GROWTH_DATA;
+
+/* ---------- math ---------- */
+const KG2LB = 2.20462262185;
+const DAYS_PER_MONTH = 30.4375;
+const IDX = { p3: 4, p5: 5, p10: 6, p25: 7, p50: 8, p75: 9, p90: 10, p95: 11, p97: 12 };
+
+function interp(sex, age) {
+  const d = DATA[sex];
+  const a = Math.min(Math.max(age, 0), 36);
+  let i = 0;
+  while (i < d.length - 2 && d[i + 1][0] < a) i++;
+  const r0 = d[i], r1 = d[i + 1];
+  const t = r1[0] === r0[0] ? 0 : (a - r0[0]) / (r1[0] - r0[0]);
+  return r0.map((v, k) => v + (r1[k] - v) * t);
+}
+function erf(x) {
+  const s = x < 0 ? -1 : 1; x = Math.abs(x);
+  const t = 1 / (1 + 0.3275911 * x);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+  return s * y;
+}
+const normCdf = z => 0.5 * (1 + erf(z / Math.SQRT2));
+
+function calc(sex, age, lbs) {
+  if (!(age >= 0 && age <= 36) || !(lbs > 0)) return null;
+  const r = interp(sex, age);
+  const L = r[1], M = r[2], S = r[3];
+  const kg = lbs / KG2LB;
+  const z = Math.abs(L) < 1e-9 ? Math.log(kg / M) / S : (Math.pow(kg / M, L) - 1) / (L * S);
+  return { z, pct: normCdf(z) * 100, medianLbs: M * KG2LB };
+}
+
+/* ---------- formatting ---------- */
+function fmtPct(p) {
+  if (p < 0.1) return '<0.1';
+  if (p > 99.9) return '>99.9';
+  if (p < 1 || p > 99) return p.toFixed(1);
+  return String(Math.round(p));
+}
+function ord(p) {
+  const s = fmtPct(p);
+  if (/[<>.]/.test(s)) return s + 'th';
+  const n = +s, v = n % 100;
+  const suf = (v >= 11 && v <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
+  return n + suf;
+}
+function fmtLbOz(lbs) {
+  const oz = Math.round(lbs * 16);
+  return `${Math.floor(oz / 16)} lb ${oz % 16} oz`;
+}
+const fmtAge = m => `${m.toFixed(1)} mo`;
+function fmtDate(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+/* ---------- dates & csv ---------- */
+function isoDate(y, m, d) {
+  if (y < 1900 || y > 2100) return null;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  return dt.toISOString().slice(0, 10);
+}
+const MONTHS = { jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9, september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12 };
+const fullYear = y => y >= 100 ? y : (y < 70 ? 2000 + y : 1900 + y);
+function localeOrder() {
+  try {
+    const p = new Intl.DateTimeFormat(undefined).formatToParts(new Date(2000, 10, 25)).map(x => x.type);
+    return p.indexOf('day') < p.indexOf('month') ? 'dmy' : 'mdy';
+  } catch (e) { return 'mdy'; }
+}
+/* order: 'mdy' | 'dmy' | 'auto' (auto = whichever is unambiguous, else the device's locale) */
+function parseDate(input, order) {
+  let s = String(input == null ? '' : input).trim().replace(/^["']|["']$/g, '');
+  if (!s) return null;
+  if (/^\d{9,13}$/.test(s)) {                                   /* unix seconds / milliseconds */
+    const n = +s; const ms = s.length >= 12 ? n : n * 1000;
+    if (ms > 6e11 && ms < 4.2e12) { const d = new Date(ms); return isoDate(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()); }
+    return null;
+  }
+  if (/^\d{5}(\.\d+)?$/.test(s)) {                              /* Excel / Sheets serial */
+    const n = Math.floor(+s);
+    if (n > 20000 && n < 80000) { const d = new Date(Date.UTC(1899, 11, 30) + n * 86400000); return isoDate(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()); }
+    return null;
+  }
+  if (/^(19|20)\d{6}$/.test(s)) return isoDate(+s.slice(0, 4), +s.slice(4, 6), +s.slice(6, 8));
+  s = s.toLowerCase()
+    .replace(/\b(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)[a-z]*\.?,?/g, ' ')            /* weekdays */
+    .replace(/t?\d{1,2}:\d{2}(:\d{2})?(\.\d+)?\s*(am|pm|a\.m\.|p\.m\.)?\s*(z|utc|gmt|[+-]\d{2}:?\d{2})?/g, ' ') /* times */
+    .replace(/\b(\d{1,2})(st|nd|rd|th)\b/g, '$1')                                           /* 5th -> 5 */
+    .replace(/\b(of|at|the)\b/g, ' ')
+    .replace(/[,()]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!s) return null;
+  let m;
+  if ((m = s.match(/^(\d{4})[-\/. ](\d{1,2})[-\/. ](\d{1,2})$/))) return isoDate(+m[1], +m[2], +m[3]);   /* 2026-01-05, 2026/1/5 */
+  if ((m = s.match(/^(\d{1,2})[-\/. ](\d{1,2})[-\/. ](\d{2}|\d{4})$/))) {                                /* 1/5/2026, 5.1.26 */
+    let a = +m[1], b = +m[2]; const y = fullYear(+m[3]);
+    let o = order === 'mdy' || order === 'dmy' ? order : (a > 12 ? 'dmy' : b > 12 ? 'mdy' : localeOrder());
+    if (o === 'mdy' && a > 12 && b <= 12) o = 'dmy';           /* impossible month: swap */
+    if (o === 'dmy' && b > 12 && a <= 12) o = 'mdy';
+    return o === 'mdy' ? isoDate(y, a, b) : isoDate(y, b, a);
+  }
+  /* anything with a month name: "Jan 5 2026", "5 January 2026", "2026 Jan 5", "5-Jan-26", "Jan-5-2026" */
+  const toks = s.split(/[\s\-\/.]+/).filter(Boolean);
+  let mon = null; const nums = [];
+  for (const tk of toks) {
+    if (MONTHS[tk] && mon === null) mon = MONTHS[tk];
+    else if (/^\d+$/.test(tk)) nums.push(tk);
+    else return null;
+  }
+  if (mon === null || nums.length !== 2) return null;
+  let day, year;
+  const four = nums.findIndex(n => n.length === 4);
+  if (four >= 0) { year = +nums[four]; day = +nums[1 - four]; }
+  else if (+nums[0] > 31) { year = fullYear(+nums[0]); day = +nums[1]; }
+  else { day = +nums[0]; year = fullYear(+nums[1]); }
+  return isoDate(year, mon, day);
+}
+/* Decide d/m vs m/d for a whole file from its date cells */
+function detectOrder(cells, pref) {
+  if (pref === 'mdy' || pref === 'dmy') return { order: pref, ambiguous: false };
+  let a12 = false, b12 = false, anyNumeric = false;
+  cells.forEach(c => {
+    const m = String(c).trim().match(/^(\d{1,2})[-\/. ](\d{1,2})[-\/. ](\d{2}|\d{4})(?!\d)/);
+    if (m) { anyNumeric = true; if (+m[1] > 12) a12 = true; if (+m[2] > 12) b12 = true; }
+  });
+  if (a12 && !b12) return { order: 'dmy', ambiguous: false };
+  if (b12 && !a12) return { order: 'mdy', ambiguous: false };
+  return { order: localeOrder(), ambiguous: anyNumeric };
+}
+function monthsBetween(birthIso, dateIso) {
+  return (Date.parse(dateIso) - Date.parse(birthIso)) / 86400000 / DAYS_PER_MONTH;
+}
+function parseWeightCell(raw, unit) {
+  const s = String(raw == null ? '' : raw).trim().toLowerCase();
+  if (!s) return null;
+  let m = s.match(/^(\d+(?:\.\d+)?)\s*(?:lb|lbs|pounds?|#)\s*[,&]?\s*(?:and\s*)?(?:(\d+(?:\.\d+)?)\s*(?:oz|ounces?)?)?$/);
+  if (m) return +m[1] + (m[2] ? +m[2] / 16 : 0);
+  m = s.match(/^(\d+(?:\.\d+)?)\s*(?:kg|kgs|kilograms?)$/);
+  if (m) return +m[1] * KG2LB;
+  m = s.match(/^(\d+(?:\.\d+)?)\s*(?:oz|ounces?)$/);
+  if (m) return +m[1] / 16;
+  m = s.match(/^(\d+(?:\.\d+)?)$/);
+  if (m) { const v = +m[1]; return unit === 'kg' ? v * KG2LB : unit === 'oz' ? v / 16 : v; }
+  return null;
+}
+function parseCSV(text) {
+  text = text.replace(/^﻿/, '');
+  const first = text.split(/\r?\n/)[0] || '';
+  const delim = [',', '\t', ';'].map(d => [d, first.split(d).length]).sort((a, b) => b[1] - a[1])[0][0];
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === delim) { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell); rows.push(row); row = []; cell = '';
+    } else cell += c;
+  }
+  row.push(cell); rows.push(row);
+  return rows.map(r => r.map(c => c.trim())).filter(r => r.some(c => c !== ''));
+}
+function importMeasurements(text, unit, datePref) {
+  const rows = parseCSV(text);
+  if (!rows.length) return { items: [], error: 'That file looks empty.' };
+  const isHeader = rows[0].every(c => c === '' || (parseDate(c) === null && parseWeightCell(c, 'lb') === null));
+  const head = isHeader ? rows[0].map(h => h.toLowerCase()) : null;
+  const body = isHeader ? rows.slice(1) : rows;
+  const find = re => head ? head.findIndex(h => re.test(h)) : -1;
+  const ageCol = find(/age|month|week|\bwk|\bmo\b/);
+  let dateCol = find(/date|when|measured|timestamp|visit|checkup|recorded|logged/);
+  const lbCol = find(/(^|[^a-z])(lb|lbs|pound|pounds)([^a-z]|$)/);
+  const ozCol = find(/(^|[^a-z])(oz|ounce|ounces)([^a-z]|$)/);
+  const kgCol = find(/(^|[^a-z])(kg|kgs|kilo|kilos|kilogram|kilograms)([^a-z]|$)/);
+  const wCol = find(/weight|wt|mass/);
+  if (head && ageCol < 0 && dateCol < 0) {   /* unnamed date column: look for one by content */
+    const taken = new Set([lbCol, ozCol, kgCol, wCol]);
+    for (let j = 0; j < head.length; j++) {
+      if (taken.has(j)) continue;
+      const sample = body.slice(0, 6).map(r => r[j]).filter(Boolean);
+      if (sample.length && sample.filter(v => parseDate(v) !== null).length >= Math.ceil(sample.length * 0.6)) { dateCol = j; break; }
+    }
+  }
+  const positional = !head || (ageCol < 0 && dateCol < 0 && lbCol < 0 && kgCol < 0 && ozCol < 0 && wCol < 0);
+  if (!positional && lbCol < 0 && kgCol < 0 && ozCol < 0 && wCol < 0) return { items: [], error: "Couldn't find a weight column. Name it something like “Weight (lbs)”." };
+  if (!positional && ageCol < 0 && dateCol < 0) return { items: [], error: "Couldn't find a date or age column. Name it “Date” or “Age (months)”." };
+
+  const getW = r => {
+    if (positional) return parseWeightCell(r[1], unit);
+    if (lbCol >= 0 && ozCol >= 0 && lbCol !== ozCol) {
+      const a = parseFloat(r[lbCol]); const b = parseFloat(r[ozCol]) || 0;
+      return isNaN(a) ? null : a + b / 16;
+    }
+    if (lbCol >= 0) return parseWeightCell(r[lbCol], 'lb');
+    if (kgCol >= 0) return parseWeightCell(r[kgCol], 'kg');
+    if (ozCol >= 0) return parseWeightCell(r[ozCol], 'oz');
+    return parseWeightCell(r[wCol], unit);
+  };
+  const ageHead = ageCol >= 0 ? head[ageCol] : '';
+  const ageFactor = /week|wk/.test(ageHead) ? 12 / 52.1775 : /day/.test(ageHead) ? 1 / DAYS_PER_MONTH : 1;
+
+  const dateCells = body.map(r => positional ? r[0] : (dateCol >= 0 && ageCol < 0 ? r[dateCol] : '')).filter(Boolean);
+  const { order, ambiguous } = detectOrder(dateCells, datePref);
+  const items = []; let skipped = 0;
+  body.forEach(r => {
+    const w = getW(r);
+    if (w == null || !(w > 0)) { skipped++; return; }
+    let date = null, age = null, raw;
+    if (positional) {
+      raw = r[0]; date = parseDate(raw, order);
+      if (!date) { const v = parseFloat(r[0]); if (!isNaN(v)) age = v; }
+    } else if (ageCol >= 0) {
+      const v = parseFloat(r[ageCol]); if (!isNaN(v)) age = v * ageFactor;
+    } else {
+      raw = r[dateCol]; date = parseDate(raw, order);
+    }
+    if (date == null && age == null) { skipped++; return; }
+    items.push(date ? { id: uid(), date, raw, lbs: w } : { id: uid(), age, lbs: w });
+  });
+  if (!items.length) return { items, error: 'No usable rows found. Each row needs a date (or age) and a weight.' };
+  return { items, skipped, order, ambiguous };
+}
+
+/* ---------- estimate today's weight when the last weigh-in is stale ---------- */
+function localToday() { const d = new Date(); return isoDate(d.getFullYear(), d.getMonth() + 1, d.getDate()); }
+function weightAtZ(sex, age, z) {
+  const r = interp(sex, age), L = r[1], M = r[2], S = r[3];
+  const base = 1 + L * S * z;
+  const kg = Math.abs(L) < 1e-9 ? M * Math.exp(S * z) : (base > 0 ? M * Math.pow(base, 1 / L) : NaN);
+  return kg * KG2LB;
+}
+/* Carries the baby's own growth curve forward: keep the latest z-score, nudged halfway along the recent trend. */
+function estimateNow(sex, good, birth, todayIso) {
+  if (!birth || !good.length) return null;
+  const last = good[good.length - 1];
+  const today = todayIso || localToday();
+  const ageNow = monthsBetween(birth, today);
+  if (!(ageNow > last.age) || ageNow > 36) return null;
+  const gapDays = last.date ? (Date.parse(today) - Date.parse(last.date)) / 86400000 : (ageNow - last.age) * DAYS_PER_MONTH;
+  if (!(last.date ? gapDays >= 2 : gapDays > 1)) return null;     /* only when more than a day old */
+  const recent = good.slice(-3);
+  let drift = 0;
+  if (recent.length >= 2 && (last.age - recent[0].age) * DAYS_PER_MONTH >= 5) {
+    const n = recent.length, mx = recent.reduce((s, p) => s + p.age, 0) / n, mz = recent.reduce((s, p) => s + p.res.z, 0) / n;
+    const den = recent.reduce((s, p) => s + (p.age - mx) ** 2, 0);
+    const slope = den > 0 ? recent.reduce((s, p) => s + (p.age - mx) * (p.res.z - mz), 0) / den : 0;   /* z per month */
+    drift = Math.max(-0.5, Math.min(0.5, 0.5 * slope * (ageNow - last.age)));
+  }
+  const z = last.res.z + drift;
+  let lbs = weightAtZ(sex, ageNow, z);
+  if (!(lbs > 0)) return null;
+  if (last.age >= 0.5) lbs = Math.max(lbs, last.lbs);               /* weight rarely drops after the newborn weeks */
+  const hw = Math.min(0.6, 0.15 + 0.01 * gapDays);
+  const lo = Math.min(weightAtZ(sex, ageNow, z - hw), lbs), hi = Math.max(weightAtZ(sex, ageNow, z + hw), lbs);
+  return { age: ageNow, lbs, lo, hi, z, pct: normCdf(z) * 100, gapDays, last };
+}
+const fmtGap = d => d < 14 ? `${Math.round(d)} days` : `${Math.round(d / 7)} weeks`;
+
+/* ---------- chart data ---------- */
+function buildRows(sex, pts, xMax, est) {
+  const ages = new Set();
+  for (let a = 0; a <= xMax + 1e-9; a += 0.5) ages.add(+a.toFixed(3));
+  ages.add(xMax);
+  if (est) ages.add(+est.age.toFixed(3));
+  const baby = new Map();
+  pts.forEach(p => {
+    if (p.age <= xMax) { const k = +p.age.toFixed(3); ages.add(k); baby.set(k, p); }
+  });
+  return [...ages].sort((a, b) => a - b).map(age => {
+    const r = interp(sex, age);
+    const v = {}; Object.keys(IDX).forEach(k => v[k] = r[IDX[k]] * KG2LB);
+    const b = baby.get(age);
+    const e = {};
+    if (est) {
+      if (age === +est.last.age.toFixed(3)) e.est = est.last.lbs;
+      if (age === +est.age.toFixed(3)) Object.assign(e, { est: est.lbs, isEst: true, estLo: est.lo, estHi: est.hi, estPct: est.pct });
+    }
+    return {
+      age, ...v, ...e,
+      b0: v.p3, b1: v.p10 - v.p3, b2: v.p25 - v.p10, b3: v.p75 - v.p25, b4: v.p90 - v.p75, b5: v.p97 - v.p90,
+      baby: b ? b.lbs : undefined, babyPct: b ? b.res.pct : undefined
+    };
+  });
+}
+
+/* ---------- ui bits ---------- */
+const inputCls = 'w-full min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-base md:text-sm md:min-h-0 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500 transition';
+const labelCls = 'block text-xs font-semibold text-slate-500 mb-1.5';
+const card = 'bg-white/80 backdrop-blur rounded-3xl shadow-sm ring-1 ring-slate-200/70';
+
+function Seg({ value, onChange, options, small }) {
+  return (
+    <div className="inline-flex w-full rounded-xl bg-slate-100 p-1 select-none">
+      {options.map(o => (
+        <button key={o.value} type="button" onClick={() => onChange(o.value)}
+          className={`flex-1 ${small ? 'px-2.5 py-2 md:py-1 text-xs' : 'px-3 py-2.5 md:py-1.5 text-sm'} rounded-lg font-semibold transition ${value === o.value ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Gauge({ pct }) {
+  const ticks = [3, 10, 25, 50, 75, 90, 97];
+  return (
+    <div className="pt-2">
+      <div className="relative h-3 rounded-full" style={{ background: 'linear-gradient(90deg,#ccfbf1 0%,#5eead4 50%,#ccfbf1 100%)' }}>
+        {ticks.map(t => <span key={t} className="absolute top-0 h-3 w-px bg-white/90" style={{ left: t + '%' }} />)}
+        <span className="absolute -top-1.5 h-6 w-6 -ml-3 rounded-full bg-rose-500 ring-4 ring-white shadow-md transition-all duration-500" style={{ left: Math.min(Math.max(pct, 1.5), 98.5) + '%' }} />
+      </div>
+      <div className="relative h-5 mt-2 text-[10px] font-medium text-slate-400">
+        {ticks.map(t => <span key={t} className="absolute -translate-x-1/2" style={{ left: t + '%' }}>{t}</span>)}
+      </div>
+    </div>
+  );
+}
+
+function ChartTip({ active, payload }) {
+  if (!active || !payload || !payload.length) return null;
+  const r = payload[0].payload;
+  return (
+    <div className="rounded-2xl bg-white px-4 py-3 shadow-xl ring-1 ring-slate-200 text-sm min-w-[190px]">
+      <div className="text-xs font-semibold text-slate-400 mb-1.5">{fmtAge(r.age)} old</div>
+      {r.baby != null && (
+        <div className="mb-2 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2 font-semibold text-slate-800"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" />{fmtLbOz(r.baby)}<span className="text-slate-400 font-normal">({r.baby.toFixed(2)} lb)</span></div>
+          <div className="text-rose-600 font-semibold ml-4.5 pl-[18px]">{ord(r.babyPct)} percentile</div>
+        </div>
+      )}
+      {r.isEst && (
+        <div className="mb-2 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2 font-semibold text-slate-800"><span className="h-2.5 w-2.5 rounded-full border-2 border-rose-500 bg-white" />≈ {fmtLbOz(r.est)}</div>
+          <div className="pl-[18px] text-xs text-slate-500">Estimate · {fmtLbOz(r.estLo)} – {fmtLbOz(r.estHi)}</div>
+          <div className="pl-[18px] text-rose-600 font-semibold">~{ord(r.estPct)} percentile</div>
+        </div>
+      )}
+      <div className="space-y-0.5 text-xs text-slate-500">
+        {[['97th', r.p97], ['75th', r.p75], ['50th', r.p50], ['25th', r.p25], ['3rd', r.p3]].map(([k, v]) => (
+          <div key={k} className="flex justify-between gap-6"><span>{k}</span><span className="tabular-nums font-medium text-slate-700">{v.toFixed(1)} lb</span></div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GrowthChart({ sex, pts, range, est }) {
+  const maxAge = pts.length ? Math.max(...pts.map(p => p.age), est ? est.age : 0) : 0;
+  const xMax = range === 'auto' ? Math.min(36, Math.max(6, Math.ceil(maxAge) + 3)) : +range;
+  const visible = pts.filter(p => p.age <= xMax);
+  const e = est && est.age <= xMax ? est : null;
+  const rows = useMemo(() => buildRows(sex, visible, xMax, e), [sex, pts, xMax, est]);
+  const lo = Math.min(...rows.map(r => r.p3), ...visible.map(p => p.lbs));
+  const hi = Math.max(...rows.map(r => r.p97), ...visible.map(p => p.lbs), e ? e.hi : 0);
+  const yMin = Math.max(0, Math.floor(lo - 0.5)), yMax = Math.ceil(hi + 0.5);
+  const step = xMax <= 12 ? 1 : xMax <= 24 ? 2 : 3;
+  const xTicks = []; for (let t = 0; t <= xMax; t += step) xTicks.push(t);
+  const n = rows.length;
+  const endLabel = txt => p => p.index === n - 1
+    ? <text x={p.x + 8} y={p.y} dy={3.5} fontSize="10.5" fontWeight="600" fill="#64748b">{txt}</text>
+    : <g />;
+  const T = '#0f766e';
+  return (
+    <div className="h-[320px] sm:h-[440px] -ml-3 sm:-ml-2">
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={rows} margin={{ top: 12, right: 34, bottom: 22, left: 0 }}>
+          <CartesianGrid stroke="#e2e8f0" strokeDasharray="2 4" vertical={false} />
+          <XAxis type="number" dataKey="age" domain={[0, xMax]} ticks={xTicks} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={{ stroke: '#cbd5e1' }}
+            label={{ value: 'Age (months)', position: 'insideBottom', offset: -14, fontSize: 11, fill: '#64748b', fontWeight: 600 }} />
+          <YAxis type="number" domain={[yMin, yMax]} allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} width={44}
+            label={{ value: 'Weight (lb)', angle: -90, position: 'insideLeft', offset: 14, fontSize: 11, fill: '#64748b', fontWeight: 600, style: { textAnchor: 'middle' } }} />
+          <Tooltip content={<ChartTip />} cursor={{ stroke: '#94a3b8', strokeDasharray: '3 3' }} isAnimationActive={false} />
+          <Area dataKey="b0" stackId="s" stroke="none" fill="none" isAnimationActive={false} activeDot={false} />
+          <Area dataKey="b1" stackId="s" stroke="none" fill={T} fillOpacity={0.07} isAnimationActive={false} activeDot={false} />
+          <Area dataKey="b2" stackId="s" stroke="none" fill={T} fillOpacity={0.13} isAnimationActive={false} activeDot={false} />
+          <Area dataKey="b3" stackId="s" stroke="none" fill={T} fillOpacity={0.21} isAnimationActive={false} activeDot={false} />
+          <Area dataKey="b4" stackId="s" stroke="none" fill={T} fillOpacity={0.13} isAnimationActive={false} activeDot={false} />
+          <Area dataKey="b5" stackId="s" stroke="none" fill={T} fillOpacity={0.07} isAnimationActive={false} activeDot={false} />
+          <Line dataKey="p3" stroke={T} strokeOpacity={0.45} strokeWidth={1} dot={false} activeDot={false} isAnimationActive={false} label={endLabel('3rd')} />
+          <Line dataKey="p10" stroke={T} strokeOpacity={0.3} strokeWidth={1} dot={false} activeDot={false} isAnimationActive={false} />
+          <Line dataKey="p25" stroke={T} strokeOpacity={0.45} strokeWidth={1} dot={false} activeDot={false} isAnimationActive={false} label={endLabel('25th')} />
+          <Line dataKey="p50" stroke={T} strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={false} isAnimationActive={false} label={endLabel('50th')} />
+          <Line dataKey="p75" stroke={T} strokeOpacity={0.45} strokeWidth={1} dot={false} activeDot={false} isAnimationActive={false} label={endLabel('75th')} />
+          <Line dataKey="p90" stroke={T} strokeOpacity={0.3} strokeWidth={1} dot={false} activeDot={false} isAnimationActive={false} />
+          <Line dataKey="p97" stroke={T} strokeOpacity={0.45} strokeWidth={1} dot={false} activeDot={false} isAnimationActive={false} label={endLabel('97th')} />
+          {e && <Line dataKey="est" stroke="#e11d48" strokeWidth={2.5} strokeDasharray="1 7" strokeLinecap="round" connectNulls isAnimationActive={false} activeDot={false}
+            dot={p => p.payload.isEst ? <circle key={'e' + p.index} cx={p.cx} cy={p.cy} r={7} fill="#fff" stroke="#e11d48" strokeWidth={3} /> : <g key={'e' + p.index} />} />}
+          <Line dataKey="baby" stroke="#e11d48" strokeWidth={2.5} connectNulls isAnimationActive={false}
+            dot={{ r: 5, fill: '#e11d48', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 7, fill: '#e11d48', stroke: '#fff', strokeWidth: 2 }} />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function AddForm({ birth, sex, onAdd }) {
+  const [mode, setMode] = useState(birth ? 'date' : 'age');
+  const [date, setDate] = useState('');
+  const [age, setAge] = useState('');
+  const [lb, setLb] = useState('');
+  const [oz, setOz] = useState('');
+  const lbs = (parseFloat(lb) || 0) + (parseFloat(oz) || 0) / 16;
+  const ageVal = mode === 'date' ? (birth && date ? monthsBetween(birth, date) : null) : (age !== '' ? parseFloat(age) : null);
+  const res = lbs > 0 && ageVal != null && !isNaN(ageVal) ? calc(sex, ageVal < 0 && ageVal > -0.1 ? 0 : ageVal, lbs) : null;
+  const canAdd = res != null;
+  const submit = e => {
+    e.preventDefault();
+    if (!canAdd) return;
+    onAdd(mode === 'date' ? { date, lbs } : { age: ageVal, lbs });
+    setLb(''); setOz(''); setDate(''); setAge('');
+  };
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      <Seg small value={mode} onChange={setMode} options={[{ value: 'date', label: 'By date' }, { value: 'age', label: 'By age' }]} />
+      {mode === 'date' ? (
+        <div>
+          <label className={labelCls}>Weigh-in date</label>
+          <input type="date" className={inputCls} value={date} onChange={e => setDate(e.target.value)} />
+          {!birth && <p className="mt-1.5 text-xs text-amber-600">Set a birth date above to use dates.</p>}
+        </div>
+      ) : (
+        <div>
+          <label className={labelCls}>Age (months, 0–36)</label>
+          <input type="number" step="0.1" min="0" max="36" placeholder="e.g. 4.5" className={inputCls} value={age} onChange={e => setAge(e.target.value)} />
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        <div><label className={labelCls}>Pounds</label><input type="number" step="0.01" min="0" placeholder="14" className={inputCls} value={lb} onChange={e => setLb(e.target.value)} /></div>
+        <div><label className={labelCls}>Ounces</label><input type="number" step="0.1" min="0" placeholder="3" className={inputCls} value={oz} onChange={e => setOz(e.target.value)} /></div>
+      </div>
+      <div className={`rounded-2xl px-4 py-3 text-sm transition ${res ? 'bg-teal-50 ring-1 ring-teal-100' : 'bg-slate-50 text-slate-400'}`}>
+        {res ? (<div className="flex items-baseline justify-between"><span className="text-slate-500">Percentile</span><span className="font-display text-2xl font-semibold text-teal-700">{ord(res.pct)}</span></div>)
+          : ageVal != null && !isNaN(ageVal) && (ageVal > 36 || ageVal < 0) ? 'Age must be between 0 and 36 months.' : 'Enter an age and weight to preview the percentile.'}
+      </div>
+      <button type="submit" disabled={!canAdd} className="w-full rounded-xl bg-teal-600 py-3 md:py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition">Add to chart</button>
+    </form>
+  );
+}
+
+
+/* ---------- shareable 9:16 image ---------- */
+const SHARE_W = 1080, SHARE_H = 1920;
+const DISPLAY = 'Fraunces, Georgia, serif', SANS = 'Inter, system-ui, -apple-system, sans-serif';
+function rr(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function fmtAgeLong(m) {
+  if (m < 0.25) return 'Newborn';
+  if (m < 2) return `${Math.round(m * DAYS_PER_MONTH / 7)} weeks old`;
+  return `${+m.toFixed(1)} months old`;
+}
+function fmtSpan(m) {
+  if (m < 2) return `${Math.max(1, Math.round(m * DAYS_PER_MONTH / 7))} wk`;
+  return `${+m.toFixed(1)} mo`;
+}
+/* Pure canvas drawing: ctx is any 2D context sized SHARE_W x SHARE_H. */
+function drawShare(ctx, { sex, name, pts }) {
+  const W = SHARE_W, H = SHARE_H, T = '#0f766e', ROSE = '#e11d48', INK = '#0f172a', MUTE = '#64748b', FAINT = '#94a3b8';
+  const latest = pts[pts.length - 1], first = pts[0], res = latest.res;
+  const text = (s, x, y, size, weight, color, o = {}) => {
+    ctx.font = `${weight} ${size}px ${o.family || SANS}`; ctx.fillStyle = color; ctx.textAlign = o.align || 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(s, x, y);
+  };
+  const card = (x, y, w, h, r) => {
+    ctx.save(); ctx.shadowColor = 'rgba(15,23,42,.10)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 16;
+    rr(ctx, x, y, w, h, r); ctx.fillStyle = '#fff'; ctx.fill(); ctx.restore();
+    rr(ctx, x, y, w, h, r); ctx.strokeStyle = 'rgba(226,232,240,.8)'; ctx.lineWidth = 2; ctx.stroke();
+  };
+
+  /* background */
+  let g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#ccfbf1'); g.addColorStop(0.45, '#ffffff'); g.addColorStop(1, '#ffe4e6');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  [[W * 0.9, 60, 560, '20,184,166', 0.20], [W * 0.05, H * 0.95, 620, '244,63,94', 0.15]].forEach(([cx, cy, r, c, a]) => {
+    const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    rg.addColorStop(0, `rgba(${c},${a})`); rg.addColorStop(1, `rgba(${c},0)`);
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+  });
+
+  /* header */
+  ctx.font = `700 24px ${SANS}`;
+  const label = 'WEIGHT PERCENTILE', lw = ctx.measureText(label).width + 84;
+  rr(ctx, 72, 96, lw, 58, 29); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fill(); ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(104, 125, 7, 0, Math.PI * 2); ctx.fillStyle = '#14b8a6'; ctx.fill();
+  text(label, 126, 134, 24, 700, T, { align: 'left' });
+  const title = name ? `${name}’s growth` : 'Growth update';
+  let ts = 92; ctx.font = `600 ${ts}px ${DISPLAY}`;
+  while (ctx.measureText(title).width > W - 144 && ts > 40) { ts -= 4; ctx.font = `600 ${ts}px ${DISPLAY}`; }
+  text(title, 72, 268, ts, 600, INK, { align: 'left', family: DISPLAY });
+  text(fmtAgeLong(latest.age), 72, 336, 40, 500, MUTE, { align: 'left' });
+
+  /* hero */
+  card(72, 400, 936, 520, 56);
+  text('PERCENTILE', W / 2, 482, 26, 700, FAINT);
+  const m = ord(res.pct).match(/^([<>]?[\d.]+)(\D+)$/) || [null, fmtPct(res.pct), 'th'];
+  ctx.font = `600 270px ${DISPLAY}`; const nw = ctx.measureText(m[1]).width;
+  ctx.font = `600 92px ${DISPLAY}`; const sw = ctx.measureText(m[2]).width;
+  const x0 = W / 2 - (nw + sw + 8) / 2;
+  text(m[1], x0, 710, 270, 600, ROSE, { align: 'left', family: DISPLAY });
+  text(m[2], x0 + nw + 8, 580, 92, 600, ROSE, { align: 'left', family: DISPLAY });
+  text(`of ${sex === 'boy' ? 'boys' : 'girls'} this age`, W / 2, 778, 40, 500, MUTE);
+  const gx = 156, gw = 768, gy = 832;
+  const gg = ctx.createLinearGradient(gx, 0, gx + gw, 0);
+  gg.addColorStop(0, '#ccfbf1'); gg.addColorStop(0.5, '#5eead4'); gg.addColorStop(1, '#ccfbf1');
+  rr(ctx, gx, gy, gw, 24, 12); ctx.fillStyle = gg; ctx.fill();
+  [3, 10, 25, 50, 75, 90, 97].forEach(p => {
+    const x = gx + gw * p / 100;
+    ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fillRect(x - 1.5, gy, 3, 24);
+    text(String(p), x, gy + 62, 22, 600, FAINT);
+  });
+  const mx = gx + gw * Math.min(Math.max(res.pct, 1.5), 98.5) / 100;
+  ctx.beginPath(); ctx.arc(mx, gy + 12, 24, 0, Math.PI * 2); ctx.fillStyle = ROSE; ctx.fill(); ctx.lineWidth = 8; ctx.strokeStyle = '#fff'; ctx.stroke();
+
+  /* tiles */
+  const diff = latest.lbs - res.medianLbs;
+  let t3;
+  if (pts.length > 1) {
+    const d = latest.lbs - first.lbs;
+    t3 = ['GAINED', `${d >= 0 ? '+' : '−'}${Math.abs(d).toFixed(1)} lb`, `over ${fmtSpan(latest.age - first.age)}`];
+  } else t3 = ['WEIGH-INS', '1', 'recorded'];
+  const tiles = [
+    ['WEIGHT', fmtLbOz(latest.lbs), `${latest.lbs.toFixed(2)} lbs`],
+    ['VS MEDIAN', `${diff >= 0 ? '+' : '−'}${Math.abs(diff).toFixed(1)} lb`, `50th: ${fmtLbOz(res.medianLbs)}`],
+    t3
+  ];
+  const tw = (936 - 48) / 3;
+  tiles.forEach(([l, v, s], i) => {
+    const x = 72 + i * (tw + 24);
+    card(x, 950, tw, 176, 44);
+    text(l, x + tw / 2, 1004, 22, 700, FAINT);
+    let vs = 44; ctx.font = `600 ${vs}px ${DISPLAY}`;
+    while (ctx.measureText(v).width > tw - 36 && vs > 24) { vs -= 2; ctx.font = `600 ${vs}px ${DISPLAY}`; }
+    text(v, x + tw / 2, 1066, vs, 600, INK, { family: DISPLAY });
+    text(s, x + tw / 2, 1104, 23, 500, MUTE);
+  });
+
+  /* chart card */
+  const cx = 72, cy = 1156, cw = 936, ch = 634;
+  card(cx, cy, cw, ch, 56);
+  text('WEIGHT FOR AGE', cx + 48, cy + 74, 24, 700, FAINT, { align: 'left' });
+  /* legend, right-aligned */
+  let lx = cx + cw - 48;
+  ctx.font = `500 22px ${SANS}`;
+  const leg = [['3rd–97th', 'band'], ['Median', 'dash'], ['Baby', 'baby']];
+  leg.forEach(([s, kind]) => {
+    ctx.font = `500 22px ${SANS}`; const w = ctx.measureText(s).width;
+    text(s, lx, cy + 74, 22, 500, MUTE, { align: 'right' });
+    lx -= w + 12;
+    if (kind === 'band') { ctx.fillStyle = 'rgba(15,118,110,.22)'; rr(ctx, lx - 30, cy + 58, 30, 18, 4); ctx.fill(); lx -= 30; }
+    else if (kind === 'dash') { ctx.strokeStyle = T; ctx.lineWidth = 3; ctx.setLineDash([8, 5]); ctx.beginPath(); ctx.moveTo(lx - 32, cy + 67); ctx.lineTo(lx, cy + 67); ctx.stroke(); ctx.setLineDash([]); lx -= 32; }
+    else { ctx.strokeStyle = ROSE; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(lx - 32, cy + 67); ctx.lineTo(lx, cy + 67); ctx.stroke(); ctx.beginPath(); ctx.arc(lx - 16, cy + 67, 7, 0, Math.PI * 2); ctx.fillStyle = ROSE; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke(); lx -= 32; }
+    lx -= 26;
+  });
+
+  const maxAge = Math.max(...pts.map(p => p.age));
+  const xMax = Math.min(36, Math.max(6, Math.ceil(maxAge) + 3));
+  const rows = buildRows(sex, pts, xMax);
+  const lo = Math.min(...rows.map(r => r.p3), ...pts.map(p => p.lbs)), hi = Math.max(...rows.map(r => r.p97), ...pts.map(p => p.lbs));
+  const yMin = Math.max(0, Math.floor(lo - 0.5)), yMax = Math.ceil(hi + 0.5);
+  const L = cx + 48 + 62, R = cx + cw - 48 - 72, TOP = cy + 118, BOT = cy + ch - 128;
+  const sx = a => L + a / xMax * (R - L), sy = v => BOT - (v - yMin) / (yMax - yMin) * (BOT - TOP);
+  /* grid + y ticks */
+  const span = yMax - yMin, ystep = span <= 8 ? 1 : span <= 16 ? 2 : span <= 30 ? 5 : 10;
+  ctx.lineWidth = 2; ctx.setLineDash([3, 9]); ctx.strokeStyle = '#cbd5e1';
+  for (let v = Math.ceil(yMin / ystep) * ystep; v <= yMax; v += ystep) {
+    ctx.beginPath(); ctx.moveTo(L, sy(v)); ctx.lineTo(R, sy(v)); ctx.stroke();
+    text(String(v), L - 16, sy(v) + 8, 24, 500, MUTE, { align: 'right' });
+  }
+  ctx.setLineDash([]);
+  const xstep = xMax <= 12 ? 1 : xMax <= 24 ? 2 : 3;
+  ctx.strokeStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(L, BOT); ctx.lineTo(R, BOT); ctx.stroke();
+  for (let a = 0; a <= xMax; a += xstep) text(String(a), sx(a), BOT + 40, 24, 500, MUTE);
+  text('Age (months)', (L + R) / 2, BOT + 88, 24, 600, MUTE);
+  ctx.save(); ctx.translate(cx + 52, (TOP + BOT) / 2); ctx.rotate(-Math.PI / 2); text('Weight (lb)', 0, 0, 24, 600, MUTE); ctx.restore();
+  /* bands */
+  const band = (up, dn, a) => {
+    ctx.beginPath(); rows.forEach((r, i) => i ? ctx.lineTo(sx(r.age), sy(r[up])) : ctx.moveTo(sx(r.age), sy(r[up])));
+    for (let i = rows.length - 1; i >= 0; i--) ctx.lineTo(sx(rows[i].age), sy(rows[i][dn]));
+    ctx.closePath(); ctx.fillStyle = `rgba(15,118,110,${a})`; ctx.fill();
+  };
+  band('p10', 'p3', 0.08); band('p25', 'p10', 0.15); band('p75', 'p25', 0.24); band('p90', 'p75', 0.15); band('p97', 'p90', 0.08);
+  const line = (k, w, a, dash) => {
+    ctx.beginPath(); rows.forEach((r, i) => i ? ctx.lineTo(sx(r.age), sy(r[k])) : ctx.moveTo(sx(r.age), sy(r[k])));
+    ctx.setLineDash(dash || []); ctx.lineWidth = w; ctx.strokeStyle = `rgba(15,118,110,${a})`; ctx.stroke(); ctx.setLineDash([]);
+  };
+  line('p3', 2.5, 0.5); line('p10', 2, 0.3); line('p25', 2.5, 0.5); line('p75', 2.5, 0.5); line('p90', 2, 0.3); line('p97', 2.5, 0.5); line('p50', 4, 1, [14, 10]);
+  /* end labels, nudged apart */
+  const last = rows[rows.length - 1];
+  const labs = [['97th', 'p97'], ['75th', 'p75'], ['50th', 'p50'], ['25th', 'p25'], ['3rd', 'p3']].map(([s, k]) => ({ s, y: sy(last[k]) + 8 }));
+  for (let i = 1; i < labs.length; i++) if (labs[i].y < labs[i - 1].y + 28) labs[i].y = labs[i - 1].y + 28;
+  labs.forEach(l => text(l.s, R + 14, l.y, 24, 600, MUTE, { align: 'left' }));
+  /* baby */
+  const bp = rows.filter(r => r.baby != null);
+  ctx.beginPath(); bp.forEach((r, i) => i ? ctx.lineTo(sx(r.age), sy(r.baby)) : ctx.moveTo(sx(r.age), sy(r.baby)));
+  ctx.lineWidth = 7; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = ROSE; ctx.stroke();
+  bp.forEach(r => { ctx.beginPath(); ctx.arc(sx(r.age), sy(r.baby), 11, 0, Math.PI * 2); ctx.fillStyle = ROSE; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = '#fff'; ctx.stroke(); });
+  const lp = bp[bp.length - 1], lpx = sx(lp.age), lpy = sy(lp.baby);
+  const bub = ord(lp.babyPct); ctx.font = `700 30px ${SANS}`;
+  const bw = ctx.measureText(bub).width + 40;
+  const bx = Math.min(Math.max(lpx - bw / 2, L), R - bw), by = lpy - 82;
+  rr(ctx, bx, by, bw, 50, 25); ctx.fillStyle = ROSE; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(lpx - 10, by + 48); ctx.lineTo(lpx + 10, by + 48); ctx.lineTo(lpx, by + 64); ctx.closePath(); ctx.fill();
+  text(bub, bx + bw / 2, by + 35, 30, 700, '#fff');
+
+  text('CDC weight-for-age growth data · birth to 36 months', W / 2, 1862, 24, 500, FAINT);
+}
+async function renderShareImage({ sex, name, pts }) {
+  try {
+    await withTimeout(Promise.all([
+      document.fonts.load('600 80px Fraunces'), document.fonts.load('600 30px Inter'),
+      document.fonts.load('500 30px Inter'), document.fonts.load('700 30px Inter')
+    ]), 3000);
+  } catch (e) {}
+  const c = document.createElement('canvas'); c.width = SHARE_W; c.height = SHARE_H;
+  drawShare(c.getContext('2d'), { sex, name, pts });
+  return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png'));
+}
+async function saveBlob(blob, filename) {
+  try {
+    const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
+    if (dl) { await dl.save({ filename, data: blob }); return 'saved'; }
+  } catch (e) { if (e && e.code === 'declined') return 'declined'; }
+  try {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove(); return 'saved';
+  } catch (e) { return 'failed'; }
+}
+
+function ShareModal({ url, busy, hasName, showName, setShowName, onSave, onClose, msg }) {
+  useEffect(() => {
+    const k = e => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);
+  }, []);
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="min-h-full flex items-center justify-center p-4">
+        <div className="w-full max-w-sm rounded-3xl bg-white p-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h3 className="font-display text-lg font-semibold">Share image</h3>
+            <button type="button" aria-label="Close" onClick={onClose} className="h-10 w-10 -mr-2 flex items-center justify-center text-2xl text-slate-400 hover:text-slate-600">×</button>
+          </div>
+          <div className="mx-auto overflow-hidden rounded-2xl bg-slate-100 shadow-inner" style={{ aspectRatio: '9 / 16', maxHeight: '62vh' }}>
+            {url ? <img src={url} alt="Shareable growth graphic" className="h-full w-full object-contain" /> : <div className="h-full w-full flex items-center justify-center text-sm text-slate-400">{busy ? 'Drawing…' : ''}</div>}
+          </div>
+          {hasName && (
+            <label className="mt-3 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-600 cursor-pointer">
+              Include name
+              <input type="checkbox" checked={showName} onChange={e => setShowName(e.target.checked)} className="h-5 w-5 accent-teal-600" />
+            </label>
+          )}
+          <button type="button" disabled={!url} onClick={onSave} className="mt-3 w-full rounded-xl bg-teal-600 py-3 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:opacity-40 transition">Save image</button>
+          <p className="mt-2 px-1 text-center text-xs text-slate-400">{msg || 'You can also press and hold the image to save or share it. 1080 × 1920 PNG.'}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const SAMPLE = [[0, 7.5], [0.5, 8.4], [1, 9.9], [2, 12.1], [3, 14.0], [4, 15.4], [5, 16.5], [6, 17.4]];
+const EXAMPLE = `date,weight_lbs\n2026-06-20,7.6\n2026-07-05,8.3\n2026-08-04,9.6\n2026-10-02,12.1`;
+
+const LS_KEY = 'bpc-v1';
+function load() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch (e) { return {}; }
+}
+const withTimeout = (p, ms) => Promise.race([p, new Promise(res => setTimeout(() => res(undefined), ms))]);
+/* If the page is hosted where Claude offers per-person storage, mirror saved data there so it follows the
+   person across devices; otherwise (or on any failure) localStorage alone is used. */
+async function openCloud() {
+  try {
+    if (!(window.claude && window.claude.use)) return null;
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (!db || !user || !user.id) return null;
+    const id = await user.id();
+    return db.collection('data/users/' + id).doc('baby');
+  } catch (e) { return null; }
+}
+async function readCloud(ref) {
+  try {
+    const snap = await withTimeout(ref.get(), 8000);
+    if (!snap) return null;
+    let d = typeof snap.data === 'function' ? snap.data() : (snap.data !== undefined ? snap.data : snap);
+    if (typeof snap.exists === 'function' ? !snap.exists() : snap.exists === false) return null;
+    if (d && typeof d.json === 'string') return { ...JSON.parse(d.json), ts: d.ts || 0 };
+    return null;
+  } catch (e) { return null; }
+}
+
+function App() {
+  const saved = useMemo(load, []);
+  const [name, setName] = useState(saved.name || '');
+  const [sex, setSex] = useState(saved.sex || 'boy');
+  const [birth, setBirth] = useState(saved.birth || '');
+  const [items, setItems] = useState(saved.items || []);
+  const [unit, setUnit] = useState(saved.unit || 'lb');
+  const [dateOrder, setDateOrder] = useState(saved.dateOrder || 'auto');
+  const [tab, setTab] = useState(saved.tab || 'upload');
+  const [view, setView] = useState(saved.view || 'chart');
+  const [range, setRange] = useState(saved.range || 'auto');
+  const [saveState, setSaveState] = useState('');   /* '', 'device', 'account' */
+  const [ready, setReady] = useState(false);
+  const cloud = useRef(null);
+  const localTs = useRef(saved.ts || 0);
+  const [msg, setMsg] = useState(null);
+  const [drag, setDrag] = useState(false);
+  const [paste, setPaste] = useState('');
+  const [copied, setCopied] = useState('');
+  const fileRef = useRef(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [showName, setShowName] = useState(true);
+  const [shareUrl, setShareUrl] = useState('');
+  const [shareMsg, setShareMsg] = useState('');
+  const shareBlob = useRef(null);
+
+  /* load: device copy is already in state; then pull the account copy if there is one and it's newer */
+  useEffect(() => {
+    let dead = false;
+    (async () => {
+      const ref = await openCloud();
+      if (dead) return;
+      if (ref) {
+        cloud.current = ref;
+        const remote = await readCloud(ref);
+        if (!dead && remote && remote.ts > localTs.current) {
+          if (remote.name != null) setName(remote.name);
+          if (remote.sex) setSex(remote.sex);
+          if (remote.birth != null) setBirth(remote.birth);
+          if (Array.isArray(remote.items)) setItems(remote.items);
+          if (remote.unit) setUnit(remote.unit);
+          if (remote.dateOrder) setDateOrder(remote.dateOrder);
+          localTs.current = remote.ts;
+        }
+      }
+      if (!dead) setReady(true);
+    })();
+    const fallback = setTimeout(() => !dead && setReady(true), 12000);
+    return () => { dead = true; clearTimeout(fallback); };
+  }, []);
+
+  /* save: debounced, after loading has finished so an empty page never overwrites saved data */
+  const firstSave = useRef(true);
+  useEffect(() => {
+    if (!ready) return;
+    if (firstSave.current) { firstSave.current = false; if (localTs.current) return; }
+    const h = setTimeout(async () => {
+      const ts = Date.now(); localTs.current = ts;
+      const payload = { name, sex, birth, items, unit, dateOrder, tab, view, range, ts };
+      let ok = false;
+      try { localStorage.setItem(LS_KEY, JSON.stringify(payload)); ok = true; } catch (e) {}
+      if (cloud.current) {
+        try { await cloud.current.set({ json: JSON.stringify(payload), ts }); setSaveState('account'); return; } catch (e) {}
+      }
+      setSaveState(ok ? 'device' : '');
+    }, 500);
+    return () => clearTimeout(h);
+  }, [ready, name, sex, birth, items, unit, dateOrder, tab, view, range]);
+
+  const pts = useMemo(() => items.map(it => {
+    let age = it.date ? (birth ? monthsBetween(birth, it.date) : null) : it.age;
+    if (age == null) return { ...it, age: null, status: 'needs-birth' };
+    if (age < 0 && age > -0.1) age = 0;
+    if (age < 0) return { ...it, age, status: 'before-birth' };
+    if (age > 36) return { ...it, age, status: 'over-range' };
+    return { ...it, age, res: calc(sex, age, it.lbs), status: 'ok' };
+  }).sort((a, b) => (a.age == null ? 1e9 : a.age) - (b.age == null ? 1e9 : b.age)), [items, birth, sex]);
+  const good = pts.filter(p => p.status === 'ok');
+  const latest = good[good.length - 1], prev = good[good.length - 2];
+  const needsBirth = pts.some(p => p.status === 'needs-birth');
+  const est = estimateNow(sex, good, birth);
+
+  useEffect(() => {
+    if (!shareOpen || !good.length) return;
+    let dead = false;
+    setShareMsg('');
+    renderShareImage({ sex, name: showName ? name.trim() : '', pts: good }).then(b => {
+      if (dead) return;
+      shareBlob.current = b;
+      setShareUrl(prev => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(b); });
+    }).catch(() => !dead && setShareMsg('Sorry, the image couldn’t be created.'));
+    return () => { dead = true; };
+  }, [shareOpen, showName, sex, pts]);
+  const closeShare = () => { setShareOpen(false); setShareUrl(prev => { if (prev) URL.revokeObjectURL(prev); return ''; }); };
+  const saveShare = async () => {
+    if (!shareBlob.current) return;
+    const slug = (showName && name.trim() ? name.trim() : 'baby').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'baby';
+    const r = await saveBlob(shareBlob.current, `${slug}-weight-percentile.png`);
+    setShareMsg(r === 'saved' ? 'Saved. If nothing downloaded, press and hold the image to save it.' : r === 'declined' ? '' : 'Couldn’t save automatically. Press and hold the image to save it.');
+  };
+
+  const ingest = (text) => {
+    const out = importMeasurements(text, unit, dateOrder);
+    if (out.error) { setMsg({ type: 'err', text: out.error }); return; }
+    setItems(cur => [...cur, ...out.items]);
+    setMsg({ type: 'ok', text: `Added ${out.items.length} measurement${out.items.length === 1 ? '' : 's'}${out.skipped ? ` · skipped ${out.skipped} unreadable row${out.skipped === 1 ? '' : 's'}` : ''}.${out.ambiguous ? ` Dates like 03/04/2026 were read as ${out.order === 'mdy' ? 'month/day/year' : 'day/month/year'}. If that’s wrong, switch “Date order” below.` : ''}` });
+  };
+  const changeOrder = o => {
+    setDateOrder(o);
+    const eff = o === 'auto' ? localeOrder() : o;
+    setItems(cur => cur.map(it => it.raw ? { ...it, date: parseDate(it.raw, eff) || it.date } : it));
+  };
+  const onFile = async f => {
+    if (!f) return;
+    try { ingest(await f.text()); } catch (e) { setMsg({ type: 'err', text: 'Could not read that file.' }); }
+  };
+  const copy = async (key, text) => {
+    try { await navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(''), 1600); } catch (e) {}
+  };
+  const resultsCsv = () => 'date,age_months,weight_lbs,percentile,z_score\n' + good.map(p => `${p.date || ''},${p.age.toFixed(2)},${p.lbs.toFixed(2)},${p.res.pct.toFixed(1)},${p.res.z.toFixed(2)}`).join('\n');
+  const loadSample = () => {
+    setItems(SAMPLE.map(([age, lbs]) => ({ id: uid(), age, lbs })));
+    setMsg({ type: 'ok', text: 'Loaded sample measurements.' });
+  };
+
+  const outside = latest && (latest.res.pct < 3 || latest.res.pct > 97);
+  const title = name.trim() ? `${name.trim()}’s growth` : 'Weight percentile';
+
+  return (
+    <div className="min-h-screen text-slate-800 bg-gradient-to-br from-teal-50 via-white to-rose-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))', paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
+        <header className="mb-8 sm:mb-10">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/80 ring-1 ring-slate-200 px-3 py-1 text-xs font-semibold text-teal-700 mb-4">
+            <span className="h-1.5 w-1.5 rounded-full bg-teal-500" /> Birth to 36 months · CDC weight-for-age
+          </div>
+          <h1 className="font-display text-3xl sm:text-5xl font-semibold tracking-tight text-slate-900">{title}</h1>
+          <p className="mt-3 max-w-2xl text-slate-500 text-sm sm:text-base">Upload weigh-ins, see where your baby falls on the growth curve, and watch the trend over time.</p>
+          {saveState && <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-slate-400"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>{saveState === 'account' ? 'Saved to your account' : 'Saved on this device'}</p>}
+        </header>
+
+        <div className="grid gap-5 sm:gap-6 lg:grid-cols-[360px_minmax(0,1fr)] items-start">
+          <aside className={`space-y-6 ${good.length ? 'order-2' : 'order-1'} lg:order-1`}>
+            <section className={`${card} p-5 sm:p-6`}>
+              <h2 className="font-display text-lg font-semibold mb-4">Baby</h2>
+              <div className="space-y-4">
+                <div><label className={labelCls}>Name (optional)</label><input className={inputCls} value={name} onChange={e => setName(e.target.value)} placeholder="Baby’s name" /></div>
+                <div><label className={labelCls}>Sex (chart used)</label><Seg value={sex} onChange={setSex} options={[{ value: 'boy', label: 'Boy' }, { value: 'girl', label: 'Girl' }]} /></div>
+                <div>
+                  <label className={labelCls}>Birth date</label>
+                  <input type="date" className={inputCls} value={birth} onChange={e => setBirth(e.target.value)} />
+                  <p className="mt-1.5 text-xs text-slate-400">Needed when your data uses dates instead of ages.</p>
+                </div>
+              </div>
+            </section>
+
+            <section className={`${card} p-5 sm:p-6`}>
+              <h2 className="font-display text-lg font-semibold mb-4">Add weights</h2>
+              <Seg value={tab} onChange={setTab} options={[{ value: 'upload', label: 'Upload CSV' }, { value: 'one', label: 'Single entry' }]} />
+              <div className="mt-5">
+                {tab === 'upload' ? (
+                  <div className="space-y-4">
+                    <div
+                      onDragOver={e => { e.preventDefault(); setDrag(true); }}
+                      onDragLeave={() => setDrag(false)}
+                      onDrop={e => { e.preventDefault(); setDrag(false); onFile(e.dataTransfer.files[0]); }}
+                      onClick={() => fileRef.current && fileRef.current.click()}
+                      className={`cursor-pointer rounded-2xl border-2 border-dashed px-4 py-8 text-center transition ${drag ? 'border-teal-500 bg-teal-50' : 'border-slate-200 hover:border-teal-400 hover:bg-teal-50/40'}`}>
+                      <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-teal-100 text-teal-700">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16V4m0 0L7 9m5-5l5 5M4 20h16" /></svg>
+                      </div>
+                      <div className="text-sm font-semibold text-slate-700"><span className="hidden md:inline">Drop a CSV here or click to browse</span><span className="md:hidden">Tap to choose a CSV file</span></div>
+                      <div className="text-xs text-slate-400 mt-1">Columns: date or age, and weight</div>
+                      <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,text/csv" className="hidden" onChange={e => { onFile(e.target.files[0]); e.target.value = ''; }} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Unit when the file doesn’t say</label>
+                      <Seg small value={unit} onChange={setUnit} options={[{ value: 'lb', label: 'lbs' }, { value: 'oz', label: 'oz' }, { value: 'kg', label: 'kg' }]} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Date order for 03/04/2026-style dates</label>
+                      <Seg small value={dateOrder} onChange={changeOrder} options={[{ value: 'auto', label: 'Auto' }, { value: 'mdy', label: 'Month first' }, { value: 'dmy', label: 'Day first' }]} />
+                    </div>
+                    <details className="group rounded-2xl bg-slate-50 px-4 py-3 text-sm">
+                      <summary className="cursor-pointer font-semibold text-slate-600 list-none flex justify-between items-center">File format & paste <span className="text-slate-400 group-open:rotate-180 transition">▾</span></summary>
+                      <div className="mt-3 space-y-3 text-xs text-slate-500">
+                        <p>Headers are detected automatically. Dates can be written many ways (2026-01-05, 1/5/26, 5 Jan 2026, January 5th 2026, 20260105, spreadsheet date numbers). Use <b>Date</b> (needs birth date) or <b>Age (months/weeks/days)</b>, plus <b>Weight (lbs / kg / oz)</b>. Separate <b>lbs</b> and <b>oz</b> columns work too, as does text like “8 lb 4 oz”.</p>
+                        <pre className="rounded-xl bg-white ring-1 ring-slate-200 p-3 font-mono text-[11px] leading-relaxed text-slate-600 overflow-x-auto">{EXAMPLE}</pre>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => copy('ex', EXAMPLE)} className="rounded-lg bg-white ring-1 ring-slate-200 px-3 py-1.5 font-semibold text-slate-600 hover:bg-slate-100">{copied === 'ex' ? 'Copied!' : 'Copy example'}</button>
+                        </div>
+                        <textarea rows="4" value={paste} onChange={e => setPaste(e.target.value)} placeholder="…or paste CSV text here" className={inputCls + ' font-mono'} />
+                        <button type="button" disabled={!paste.trim()} onClick={() => { ingest(paste); setPaste(''); }} className="rounded-lg bg-teal-600 px-3 py-1.5 font-semibold text-white disabled:opacity-40 hover:bg-teal-700">Import pasted text</button>
+                      </div>
+                    </details>
+                  </div>
+                ) : <AddForm birth={birth} sex={sex} onAdd={m => setItems(cur => [...cur, { id: uid(), ...m }])} />}
+              </div>
+              {msg && <div className={`mt-4 rounded-xl px-3 py-2 text-xs font-medium ${msg.type === 'err' ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}>{msg.text}</div>}
+              <div className="mt-5 flex items-center justify-between text-xs">
+                <button type="button" onClick={loadSample} className="font-semibold text-teal-700 hover:underline">Try sample data</button>
+                {items.length > 0 && <button type="button" onClick={() => { setItems([]); setMsg(null); }} className="font-semibold text-slate-400 hover:text-rose-600">Clear all ({items.length})</button>}
+              </div>
+            </section>
+          </aside>
+
+          <main className={`space-y-6 min-w-0 ${good.length ? 'order-1' : 'order-2'} lg:order-2`}>
+            {needsBirth && <div className="rounded-2xl bg-amber-50 ring-1 ring-amber-200 px-4 py-3 text-sm text-amber-800">Some measurements use dates. Enter a birth date to place them on the chart.</div>}
+
+            <div className="grid gap-5 sm:gap-6 md:grid-cols-3">
+              <section className={`${card} p-5 sm:p-6`}>
+                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Latest weight</div>
+                {latest ? (<>
+                  <div className="mt-2 font-display text-2xl sm:text-3xl font-semibold text-slate-900">{fmtLbOz(latest.lbs)}</div>
+                  <div className="text-sm text-slate-500 mt-1">{latest.lbs.toFixed(2)} lbs</div>
+                  <div className="mt-4 text-xs text-slate-400">{fmtAge(latest.age)} old{latest.date ? ` · ${fmtDate(latest.date)}` : ''}</div>
+                </>) : <div className="mt-3 text-sm text-slate-400">No measurements yet.<br />Upload a CSV or add one to begin.</div>}
+              </section>
+
+              <section className={`${card} p-5 sm:p-6 md:col-span-2`}>
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                  <div>
+                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Percentile</div>
+                    {latest ? (
+                      <div className="mt-2 flex items-baseline gap-3">
+                        <span className="font-display text-4xl sm:text-5xl font-semibold text-rose-600">{ord(latest.res.pct)}</span>
+                        <span className="text-sm text-slate-500">of {sex === 'boy' ? 'boys' : 'girls'} this age</span>
+                      </div>
+                    ) : <div className="mt-3 text-sm text-slate-400">Your baby’s percentile appears here.</div>}
+                  </div>
+                  {latest && (
+                    <div className="flex flex-wrap sm:justify-end gap-2 text-xs font-semibold">
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">z {latest.res.z.toFixed(2)}</span>
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">{latest.lbs >= latest.res.medianLbs ? '+' : '−'}{Math.abs(latest.lbs - latest.res.medianLbs).toFixed(1)} lb vs median</span>
+                      {prev && (() => { const d = latest.res.pct - prev.res.pct; return <span className={`rounded-full px-2.5 py-1 ${Math.abs(d) < 5 ? 'bg-teal-50 text-teal-700' : 'bg-amber-50 text-amber-700'}`}>{d >= 0 ? '▲' : '▼'} {Math.abs(d).toFixed(0)} pts since last</span>; })()}
+                    </div>
+                  )}
+                </div>
+                {latest && <Gauge pct={latest.res.pct} />}
+                {latest && <button type="button" onClick={() => setShareOpen(true)} className="mt-3 w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-600 ring-1 ring-rose-100 hover:bg-rose-100 transition"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 19h14" /></svg>Create share image</button>}
+                {latest && outside && <p className="mt-2 text-xs text-amber-700">This is outside the 3rd–97th range. That isn’t automatically a concern, but it’s worth mentioning to your pediatrician.</p>}
+              </section>
+            {est && (
+              <section className="md:col-span-3 rounded-3xl border-2 border-dashed border-rose-200 bg-rose-50/60 p-5 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 text-xs font-semibold text-rose-500 uppercase tracking-wide">Estimated today <span className="rounded-full bg-white px-2 py-0.5 normal-case tracking-normal text-[11px] text-rose-500 ring-1 ring-rose-100">estimate</span></div>
+                    <div className="mt-2 font-display text-3xl sm:text-4xl font-semibold text-slate-900">≈ {fmtLbOz(est.lbs)}</div>
+                    <div className="mt-1 text-sm text-slate-500">{est.lbs.toFixed(2)} lbs · likely {fmtLbOz(est.lo)} to {fmtLbOz(est.hi)}</div>
+                  </div>
+                  <div className="text-sm text-slate-500 sm:max-w-xs sm:text-right">
+                    <div>Last weighed <b className="text-slate-700">{fmtGap(est.gapDays)} ago</b>. Carries {name.trim() || 'your baby'}’s recent growth curve forward, near the <b className="text-slate-700">{ord(est.pct)}</b> percentile.</div>
+                    <div className="mt-1 text-xs text-slate-400">An estimate, not a measurement. Weigh again for an exact number.</div>
+                  </div>
+                </div>
+              </section>
+            )}
+            </div>
+
+            <section className={`${card} p-4 sm:p-6`}>
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h2 className="font-display text-lg font-semibold">Weight for age</h2>
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                  {view === 'chart' && (
+                    <div className="w-full sm:w-56"><Seg small value={range} onChange={setRange} options={[{ value: 'auto', label: 'Auto' }, { value: '6', label: '6' }, { value: '12', label: '12' }, { value: '24', label: '24' }, { value: '36', label: '36' }]} /></div>
+                  )}
+                  <div className="w-full sm:w-40"><Seg small value={view} onChange={setView} options={[{ value: 'chart', label: 'Chart' }, { value: 'table', label: 'Table' }]} /></div>
+                </div>
+              </div>
+
+              {view === 'chart' ? (<>
+                <GrowthChart sex={sex} pts={good} range={range} est={est} />
+                <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500">
+                  <span className="flex items-center gap-2"><svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="#e11d48" strokeWidth="2.5" /><circle cx="13" cy="5" r="4" fill="#e11d48" stroke="#fff" strokeWidth="1.5" /></svg>{name.trim() || 'Baby'}</span>
+                  {est && <span className="flex items-center gap-2"><svg width="26" height="10"><line x1="0" y1="5" x2="14" y2="5" stroke="#e11d48" strokeWidth="2.5" strokeDasharray="1 6" strokeLinecap="round" /><circle cx="19" cy="5" r="4" fill="#fff" stroke="#e11d48" strokeWidth="2" /></svg>Estimate for today</span>}
+                  <span className="flex items-center gap-2"><svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="#0f766e" strokeWidth="1.5" strokeDasharray="5 4" /></svg>50th percentile</span>
+                  <span className="flex items-center gap-2"><span className="h-3 w-6 rounded-sm" style={{ background: 'rgba(15,118,110,.21)' }} />25th–75th</span>
+                  <span className="flex items-center gap-2"><span className="h-3 w-6 rounded-sm" style={{ background: 'rgba(15,118,110,.09)' }} />3rd–97th</span>
+                  {!good.length && <span className="text-slate-400">Add data to plot your baby.</span>}
+                </div>
+              </>) : (
+                <div>
+                  {pts.length ? (<>
+                    {/* phones: one card per weigh-in */}
+                    <ul className="sm:hidden space-y-2.5">
+                      {pts.map(p => (
+                        <li key={p.id} className="rounded-2xl bg-slate-50 px-4 py-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="font-semibold text-slate-800">{fmtLbOz(p.lbs)} <span className="text-xs font-normal text-slate-400">{p.lbs.toFixed(2)} lb</span></div>
+                              <div className="text-xs text-slate-500 mt-0.5">{p.age != null ? fmtAge(p.age) : 'Age unknown'}{p.date ? ` · ${fmtDate(p.date)}` : ''}</div>
+                            </div>
+                            <button type="button" aria-label="Remove measurement" onClick={() => setItems(cur => cur.filter(i => i.id !== p.id))} className="-mr-2 -mt-1 h-10 w-10 flex items-center justify-center text-slate-300 active:text-rose-500 text-2xl leading-none">×</button>
+                          </div>
+                          {p.res ? (
+                            <div className="mt-2 flex items-center gap-3">
+                              <div className="h-1.5 flex-1 rounded-full bg-slate-200 overflow-hidden"><div className="h-full rounded-full bg-rose-400" style={{ width: Math.min(100, Math.max(2, p.res.pct)) + '%' }} /></div>
+                              <span className="font-semibold tabular-nums text-rose-600 text-sm">{ord(p.res.pct)}</span>
+                            </div>
+                          ) : <div className="mt-2 text-xs text-amber-600">{p.status === 'needs-birth' ? 'Needs birth date' : p.status === 'over-range' ? 'Over 36 months' : 'Before birth date'}</div>}
+                        </li>
+                      ))}
+                    </ul>
+                    {/* larger screens: table */}
+                    <div className="hidden sm:block overflow-x-auto -mx-1">
+                    <table className="w-full text-sm">
+                      <thead><tr className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                        <th className="px-3 py-2">Date</th><th className="px-3 py-2">Age</th><th className="px-3 py-2">Weight</th><th className="px-3 py-2 w-48">Percentile</th><th className="px-3 py-2">z</th><th className="px-3 py-2" />
+                      </tr></thead>
+                      <tbody>
+                        {pts.map(p => (
+                          <tr key={p.id} className="border-t border-slate-100">
+                            <td className="px-3 py-2.5 text-slate-600">{p.date ? fmtDate(p.date) : '—'}</td>
+                            <td className="px-3 py-2.5 tabular-nums">{p.age != null ? fmtAge(p.age) : '—'}</td>
+                            <td className="px-3 py-2.5 tabular-nums"><span className="font-semibold text-slate-800">{fmtLbOz(p.lbs)}</span> <span className="text-slate-400 text-xs">{p.lbs.toFixed(2)} lb</span></td>
+                            <td className="px-3 py-2.5">
+                              {p.res ? (
+                                <div className="flex items-center gap-3">
+                                  <div className="h-1.5 w-24 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-rose-400" style={{ width: Math.min(100, Math.max(2, p.res.pct)) + '%' }} /></div>
+                                  <span className="font-semibold tabular-nums text-slate-800">{ord(p.res.pct)}</span>
+                                </div>
+                              ) : <span className="text-xs text-amber-600">{p.status === 'needs-birth' ? 'Needs birth date' : p.status === 'over-range' ? 'Over 36 months' : 'Before birth date'}</span>}
+                            </td>
+                            <td className="px-3 py-2.5 tabular-nums text-slate-500">{p.res ? p.res.z.toFixed(2) : ''}</td>
+                            <td className="px-3 py-2.5 text-right"><button type="button" aria-label="Remove" onClick={() => setItems(cur => cur.filter(i => i.id !== p.id))} className="text-slate-300 hover:text-rose-500 text-lg leading-none">×</button></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    </div>
+                  </>) : <div className="py-10 text-center text-sm text-slate-400">No measurements yet.</div>}
+                  {good.length > 0 && <div className="mt-4 sm:text-right"><button type="button" onClick={() => copy('res', resultsCsv())} className="w-full sm:w-auto rounded-xl bg-white ring-1 ring-slate-200 px-3 py-2.5 sm:py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100">{copied === 'res' ? 'Copied!' : 'Copy results as CSV'}</button></div>}
+                </div>
+              )}
+            </section>
+          </main>
+        </div>
+
+        {shareOpen && <ShareModal url={shareUrl} busy={!shareMsg} hasName={!!name.trim()} showName={showName} setShowName={setShowName} onSave={saveShare} onClose={closeShare} msg={shareMsg} />}
+
+        <footer className="mt-10 max-w-3xl text-xs leading-relaxed text-slate-400">
+          Percentiles use the CDC weight-for-age LMS values (birth to 36 months) with linear interpolation between ages. Note that the CDC recommends the WHO growth standards for children under 2 in the U.S., so numbers can differ slightly from those charts. This tool is educational and isn’t medical advice. Steady growth along a curve usually says more than any single reading, so talk with your pediatrician about concerns.
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
