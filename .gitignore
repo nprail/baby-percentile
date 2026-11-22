@@ -1,2 +1,6 @@
+node_modules
+.wrangler
+.dev.vars
+dist
 baby-weights.csv
 .DS_Store
